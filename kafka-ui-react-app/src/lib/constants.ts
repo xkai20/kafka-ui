@@ -61,9 +61,9 @@ export const MESSAGES_PER_PAGE_OPTIONS: SelectOption[] = [
   { value: 200, label: '200' },
 ];
 
-export const GIT_REPO_LINK = 'https://github.com/provectus/kafka-ui';
+export const GIT_REPO_LINK = 'https://github.com/xkai20/kafka-ui';
 export const GIT_REPO_LATEST_RELEASE_LINK =
-  'https://api.github.com/repos/provectus/kafka-ui/releases/latest';
+  'https://api.github.com/repos/xkai20/kafka-ui/releases/latest';
 
 export const LOCAL_STORAGE_KEY_PREFIX = 'kafka-ui';
 
