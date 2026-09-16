@@ -10,8 +10,12 @@ import {
 import TopicMessagesContext from 'components/contexts/TopicMessagesContext';
 import { useAppSelector } from 'lib/hooks/redux';
 import { Button } from 'components/common/Button/Button';
+import Select from 'components/common/Select/Select';
 import { useSearchParams } from 'react-router-dom';
-import { MESSAGES_PER_PAGE } from 'lib/constants';
+import {
+  MESSAGES_PER_PAGE,
+  MESSAGES_PER_PAGE_OPTIONS,
+} from 'lib/constants';
 import * as S from 'components/common/NewTable/Table.styled';
 
 import PreviewModal from './PreviewModal';
@@ -24,7 +28,8 @@ const MessagesTable: React.FC = () => {
   const [contentFilters, setContentFilters] = useState<PreviewFilter[]>([]);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const page = searchParams.get('page');
+  const page = Number(searchParams.get('page') || 0);
+  const perPage = Number(searchParams.get('limit') || MESSAGES_PER_PAGE);
   const { isLive } = useContext(TopicMessagesContext);
 
   const messages = useAppSelector(getTopicMessges);
@@ -37,17 +42,23 @@ const MessagesTable: React.FC = () => {
   const isPaginationDisabled = isTailing || isFetching;
 
   const isNextPageButtonDisabled =
-    isPaginationDisabled || messages.length < Number(MESSAGES_PER_PAGE);
-  const isPrevPageButtonDisabled =
-    isPaginationDisabled || !Number(searchParams.get('page'));
+    isPaginationDisabled || messages.length < perPage;
+  const isPrevPageButtonDisabled = isPaginationDisabled || page <= 0;
 
   const handleNextPage = () => {
-    searchParams.set('page', String(Number(page || 0) + 1));
+    searchParams.set('page', String(page + 1));
     setSearchParams(searchParams);
   };
 
   const handlePrevPage = () => {
-    searchParams.set('page', String(Number(page || 0) - 1));
+    searchParams.set('page', String(Math.max(0, page - 1)));
+    setSearchParams(searchParams);
+  };
+
+  const handlePerPageChange = (value: string | number) => {
+    //changing the page size resets pagination to the first page
+    searchParams.set('limit', String(value));
+    searchParams.set('page', '0');
     setSearchParams(searchParams);
   };
 
@@ -136,7 +147,23 @@ const MessagesTable: React.FC = () => {
           >
             Next →
           </Button>
+          <S.GoToPage>
+            <span>Messages per page:</span>
+            <Select
+              id="messagesPerPage"
+              aria-label="Messages per page"
+              selectSize="M"
+              minWidth="80px"
+              options={MESSAGES_PER_PAGE_OPTIONS}
+              value={perPage}
+              onChange={handlePerPageChange}
+              disabled={isTailing}
+            />
+          </S.GoToPage>
         </S.Pages>
+        <S.PageInfo>
+          <span>Page {page + 1}</span>
+        </S.PageInfo>
       </S.Pagination>
     </div>
   );

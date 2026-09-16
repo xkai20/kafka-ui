@@ -17,7 +17,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import MultiSelect from 'components/common/MultiSelect/MultiSelect.styled';
 import { Option } from 'react-multi-select-component';
 import BytesFormatted from 'components/common/BytesFormatted/BytesFormatted';
-import { BASE_PARAMS } from 'lib/constants';
+import { BASE_PARAMS, MESSAGES_PER_PAGE } from 'lib/constants';
 import Select from 'components/common/Select/Select';
 import { Button } from 'components/common/Button/Button';
 import Search from 'components/common/Search/Search';
@@ -39,6 +39,7 @@ import { useTopicDetails } from 'lib/hooks/api/topics';
 import { InputLabel } from 'components/common/Input/InputLabel.styled';
 import { getSerdeOptions } from 'components/Topics/Topic/SendMessage/utils';
 import { useSerdes } from 'lib/hooks/api/topicMessages';
+import { getDefaultSerdeName } from 'components/Topics/Topic/Messages/getDefaultSerdeName';
 
 import * as S from './Filters.styled';
 import {
@@ -74,8 +75,6 @@ export interface ActiveMessageFilter {
   code: string;
 }
 
-const PER_PAGE = 100;
-
 export const SeekTypeOptions = [
   { value: SeekType.OFFSET, label: 'Offset' },
   { value: SeekType.TIMESTAMP, label: 'Timestamp' },
@@ -98,7 +97,16 @@ const Filters: React.FC<FiltersProps> = ({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const page = searchParams.get('page');
+  const perPage = searchParams.get('limit') || MESSAGES_PER_PAGE;
+
+  const { data: serdes = {} } = useSerdes({
+    clusterName,
+    topicName,
+    use: SerdeUsage.DESERIALIZE,
+  });
+
+  const defaultKeySerde = getDefaultSerdeName(serdes.key || []);
+  const defaultValueSerde = getDefaultSerdeName(serdes.value || []);
 
   const { data: topic } = useTopicDetails({ clusterName, topicName });
 
@@ -112,6 +120,7 @@ const Filters: React.FC<FiltersProps> = ({
   const { value: isQuickEditOpen, toggle: toggleQuickEdit } = useBoolean();
 
   const source = React.useRef<EventSource | null>(null);
+  const isFirstRendering = React.useRef<boolean>(true);
 
   const [selectedPartitions, setSelectedPartitions] = React.useState<Option[]>(
     getSelectedPartitionsFromSeekToParam(searchParams, partitions)
@@ -190,7 +199,7 @@ const Filters: React.FC<FiltersProps> = ({
     setOffset('');
     setTimestamp(null);
     setQuery('');
-    changeSeekDirection(SeekDirection.FORWARD);
+    changeSeekDirection(SeekDirection.BACKWARD);
     getSelectedPartitionsFromSeekToParam(searchParams, partitions);
     setSelectedPartitions(
       partitions.map((partition: Partition) => {
@@ -202,7 +211,7 @@ const Filters: React.FC<FiltersProps> = ({
     );
   };
 
-  const handleFiltersSubmit = (currentOffset: string) => {
+  const handleFiltersSubmit = (currentOffset: string, targetPage = 0) => {
     const nextAttempt = Number(searchParams.get('attempt') || 0) + 1;
     const props: Query = {
       q:
@@ -211,11 +220,13 @@ const Filters: React.FC<FiltersProps> = ({
           : query,
       filterQueryType: queryType,
       attempt: nextAttempt,
-      limit: PER_PAGE,
-      page: page || 0,
+      limit: perPage,
+      page: targetPage,
       seekDirection,
-      keySerde: keySerde || searchParams.get('keySerde') || '',
-      valueSerde: valueSerde || searchParams.get('valueSerde') || '',
+      keySerde:
+        keySerde || searchParams.get('keySerde') || defaultKeySerde,
+      valueSerde:
+        valueSerde || searchParams.get('valueSerde') || defaultValueSerde,
     };
 
     if (isSeekTypeControlVisible) {
@@ -409,9 +420,16 @@ const Filters: React.FC<FiltersProps> = ({
     updatePhase,
   ]);
   React.useEffect(() => {
-    if (location.search?.length === 0) {
-      handleFiltersSubmit(offset);
-    }
+    //the page number is kept on the first rendering (so a refresh or a shared link
+    //with `page` param is opened on the same page), while any change of the search
+    //criteria drills the pagination back to the first page.
+    //page changes are handled by the pagination controls (see MessagesTable) and are
+    //not listed in the dependencies below, so they are not resetting the page.
+    const pageToLoad = isFirstRendering.current
+      ? Number(searchParams.get('page') || 0)
+      : 0;
+    isFirstRendering.current = false;
+    handleFiltersSubmit(offset, pageToLoad);
   }, [
     seekDirection,
     queryType,
@@ -419,30 +437,13 @@ const Filters: React.FC<FiltersProps> = ({
     currentSeekType,
     timestamp,
     query,
-    location,
-  ]);
-  React.useEffect(() => {
-    handleFiltersSubmit(offset);
-  }, [
-    seekDirection,
-    queryType,
-    activeFilter,
-    currentSeekType,
-    timestamp,
-    query,
-    seekDirection,
-    page,
+    defaultKeySerde,
+    defaultValueSerde,
   ]);
 
   React.useEffect(() => {
     setIsTailing(isLive);
   }, [isLive]);
-
-  const { data: serdes = {} } = useSerdes({
-    clusterName,
-    topicName,
-    use: SerdeUsage.DESERIALIZE,
-  });
 
   return (
     <S.FiltersWrapper>
@@ -531,7 +532,7 @@ const Filters: React.FC<FiltersProps> = ({
             buttonSize="M"
             disabled={isSubmitDisabled}
             onClick={() =>
-              isFetching ? handleSSECancel() : handleFiltersSubmit(offset)
+              isFetching ? handleSSECancel() : handleFiltersSubmit(offset, 0)
             }
             style={{ fontWeight: 500 }}
           >

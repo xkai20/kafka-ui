@@ -677,6 +677,16 @@ paths:
           in: query
           schema:
             type: integer
+        - name: page
+          in: query
+          description: >
+            Zero-based number of the messages page to return. Messages are consumed from the
+            seek position (see seekType/seekTo) in the requested seekDirection and the first
+            page * limit matching messages are skipped, so the same message window is returned
+            for the same seek parameters and topic state. Must not be negative.
+          schema:
+            type: integer
+            default: 0
         - name: q
           in: query
           schema:

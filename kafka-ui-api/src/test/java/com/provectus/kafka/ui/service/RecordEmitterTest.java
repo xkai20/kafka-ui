@@ -117,6 +117,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(BEGINNING, EMPTY_TOPIC, null),
         100,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -126,6 +127,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(BEGINNING, EMPTY_TOPIC, null),
         100,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -150,6 +152,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(BEGINNING, TOPIC, null),
         PARTITIONS * MSGS_PER_PARTITION,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -159,6 +162,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(LATEST, TOPIC, null),
         PARTITIONS * MSGS_PER_PARTITION,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -182,6 +186,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(OFFSET, TOPIC, targetOffsets),
         PARTITIONS * MSGS_PER_PARTITION,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -191,6 +196,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(OFFSET, TOPIC, targetOffsets),
         PARTITIONS * MSGS_PER_PARTITION,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -230,6 +236,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(TIMESTAMP, TOPIC, targetTimestamps),
         PARTITIONS * MSGS_PER_PARTITION,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -239,6 +246,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(TIMESTAMP, TOPIC, targetTimestamps),
         PARTITIONS * MSGS_PER_PARTITION,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -271,6 +279,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(OFFSET, TOPIC, targetOffsets),
         numMessages,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()
@@ -298,6 +307,7 @@ class RecordEmitterTest extends AbstractIntegrationTest {
         this::createConsumer,
         new ConsumerPosition(OFFSET, TOPIC, offsets),
         100,
+        0,
         RECORD_DESERIALIZER,
         NOOP_FILTER,
         PollingSettings.createDefault()

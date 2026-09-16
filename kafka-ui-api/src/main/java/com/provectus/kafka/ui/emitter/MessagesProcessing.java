@@ -29,11 +29,13 @@ class MessagesProcessing {
 
   private final ConsumingStats consumingStats = new ConsumingStats();
   private long sentMessages = 0;
+  private long skippedMessages = 0;
 
   private final ConsumerRecordDeserializer deserializer;
   private final Predicate<TopicMessageDTO> filter;
   private final boolean ascendingSortBeforeSend;
   private final @Nullable Integer limit;
+  private final long skip; //number of messages to skip before sending (used for paging)
 
   boolean limitReached() {
     return limit != null && sentMessages >= limit;
@@ -46,12 +48,17 @@ class MessagesProcessing {
             TopicMessageDTO topicMessage = deserializer.deserialize(rec);
             try {
               if (filter.test(topicMessage)) {
-                sink.next(
-                    new TopicMessageEventDTO()
-                        .type(TopicMessageEventDTO.TypeEnum.MESSAGE)
-                        .message(topicMessage)
-                );
-                sentMessages++;
+                if (skippedMessages < skip) {
+                  //messages that belong to previous pages are consumed but not sent to the client
+                  skippedMessages++;
+                } else {
+                  sink.next(
+                      new TopicMessageEventDTO()
+                          .type(TopicMessageEventDTO.TypeEnum.MESSAGE)
+                          .message(topicMessage)
+                  );
+                  sentMessages++;
+                }
               }
             } catch (Exception e) {
               consumingStats.incFilterApplyError();

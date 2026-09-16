@@ -1,17 +1,21 @@
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { render, EventSourceMock, WithRoute } from 'lib/testHelpers';
 import Messages, {
   SeekDirectionOptions,
   SeekDirectionOptionsObj,
 } from 'components/Topics/Topic/Messages/Messages';
-import { SeekDirection, SeekType } from 'generated-sources';
+import { SeekDirection, SeekType, TopicMessage } from 'generated-sources';
 import userEvent from '@testing-library/user-event';
 import { clusterTopicMessagesPath } from 'lib/paths';
 import { useSerdes } from 'lib/hooks/api/topicMessages';
 import { serdesPayload } from 'lib/fixtures/topicMessages';
 import { useTopicDetails } from 'lib/hooks/api/topics';
 import { externalTopicPayload } from 'lib/fixtures/topics';
+import {
+  topicMessagePayload,
+  topicMessagesMetaPayload,
+} from 'redux/reducers/topicMessages/__test__/fixtures';
 
 jest.mock('lib/hooks/api/topicMessages', () => ({
   useSerdes: jest.fn(),
@@ -39,6 +43,8 @@ describe('Messages', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'EventSource', {
       value: EventSourceMock,
+      configurable: true,
+      writable: true,
     });
     (useSerdes as jest.Mock).mockImplementation(() => ({
       data: serdesPayload,
@@ -102,6 +108,111 @@ describe('Messages', () => {
       expect(screen.getAllByRole('listbox')[3]).toHaveTextContent(
         SeekDirectionOptionsObj[SeekDirection.BACKWARD].label
       );
+    });
+  });
+
+  describe('Component rendering without any search params', () => {
+    it('should load the first page of the newest messages', async () => {
+      const requestedUrls: string[] = [];
+      class EventSourceSpy extends EventSourceMock {
+        constructor(url: string) {
+          super(url);
+          requestedUrls.push(url);
+        }
+      }
+      Object.defineProperty(window, 'EventSource', {
+        value: EventSourceSpy,
+      });
+
+      renderComponent('');
+
+      await waitFor(() => {
+        expect(requestedUrls[requestedUrls.length - 1]).toContain(
+          `seekDirection=${SeekDirection.BACKWARD}`
+        );
+      });
+      const lastRequestedUrl = requestedUrls[requestedUrls.length - 1];
+      expect(lastRequestedUrl).toContain(
+        `seekDirection=${SeekDirection.BACKWARD}`
+      );
+      expect(lastRequestedUrl).toContain(`seekType=${SeekType.LATEST}`);
+      expect(lastRequestedUrl).toContain('page=0');
+      expect(lastRequestedUrl).toContain('limit=30');
+    });
+  });
+
+  describe('Pagination', () => {
+    const paginationParams =
+      'filterQueryType=STRING_CONTAINS&attempt=1&limit=30&page=0&seekDirection=BACKWARD&seekType=LATEST&keySerde=String&valueSerde=String';
+
+    const createEventSourceSpy = (
+      requestedUrls: string[],
+      createdSources: (EventSourceMock & { onerror?: () => void })[]
+    ) => {
+      class EventSourceSpy extends EventSourceMock {
+        constructor(url: string) {
+          super(url);
+          requestedUrls.push(url);
+          createdSources.push(this);
+        }
+      }
+      Object.defineProperty(window, 'EventSource', {
+        value: EventSourceSpy,
+        configurable: true,
+        writable: true,
+      });
+    };
+
+    it('should request the messages page which is set in the url', async () => {
+      const requestedUrls: string[] = [];
+      const createdSources: (EventSourceMock & { onerror?: () => void })[] = [];
+      createEventSourceSpy(requestedUrls, createdSources);
+
+      renderComponent(paginationParams.replace('page=0', 'page=2'));
+
+      await waitFor(() => {
+        expect(requestedUrls[requestedUrls.length - 1]).toContain('page=2');
+      });
+    });
+
+    it('should request the next messages page when the Next button is clicked', async () => {
+      const requestedUrls: string[] = [];
+      const createdSources: (EventSourceMock & { onerror?: () => void })[] = [];
+      createEventSourceSpy(requestedUrls, createdSources);
+
+      const messages: TopicMessage[] = Array.from({ length: 30 }, (_, index) => ({
+        ...topicMessagePayload,
+        offset: index,
+      }));
+      const path = `${clusterTopicMessagesPath()}?${new URLSearchParams(
+        paginationParams
+      ).toString()}`;
+      render(
+        <WithRoute path={clusterTopicMessagesPath()}>
+          <Messages />
+        </WithRoute>,
+        {
+          initialEntries: [path],
+          preloadedState: {
+            topicMessages: {
+              messages,
+              meta: { ...topicMessagesMetaPayload },
+              isFetching: false,
+              messageEventType: '',
+            },
+          },
+        }
+      );
+
+      await waitFor(() => expect(createdSources.length).toBeGreaterThan(0));
+      //finish messages loading to make pagination controls clickable
+      act(() => createdSources[createdSources.length - 1].onerror?.());
+
+      await userEvent.click(screen.getByText(/next/i));
+
+      await waitFor(() => {
+        expect(requestedUrls[requestedUrls.length - 1]).toContain('page=1');
+      });
     });
   });
 });

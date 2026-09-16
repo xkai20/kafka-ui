@@ -12,7 +12,7 @@ export const List = styled.ul.attrs({ role: 'menu' })`
 export const Link = styled(NavLink)(
   ({ theme }) => css`
     width: 100%;
-    padding: 0.5em 0.75em;
+    padding: 0.5em 0.65em;
     cursor: pointer;
     text-decoration: none;
     margin: 0 0;

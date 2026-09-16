@@ -85,6 +85,7 @@ public class MessagesController extends AbstractController implements MessagesAp
                                                                            SeekTypeDTO seekType,
                                                                            List<String> seekTo,
                                                                            Integer limit,
+                                                                           Integer page,
                                                                            String q,
                                                                            MessageFilterTypeDTO filterQueryType,
                                                                            SeekDirectionDTO seekDirection,
@@ -118,7 +119,7 @@ public class MessagesController extends AbstractController implements MessagesAp
         ResponseEntity.ok(
             messagesService.loadMessages(
                 getCluster(clusterName), topicName, positions, q, filterQueryType,
-                limit, seekDirection, keySerde, valueSerde)
+                limit, page, seekDirection, keySerde, valueSerde)
         )
     );
 

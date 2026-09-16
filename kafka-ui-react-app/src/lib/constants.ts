@@ -53,7 +53,13 @@ export const BYTES_IN_GB = 1_073_741_824;
 export const BUILD_VERSION_PATTERN = /v\d.\d.\d/;
 
 export const PER_PAGE = 25;
-export const MESSAGES_PER_PAGE = '100';
+export const MESSAGES_PER_PAGE = '30';
+export const MESSAGES_PER_PAGE_OPTIONS: SelectOption[] = [
+  { value: 30, label: '30' },
+  { value: 50, label: '50' },
+  { value: 100, label: '100' },
+  { value: 200, label: '200' },
+];
 
 export const GIT_REPO_LINK = 'https://github.com/provectus/kafka-ui';
 export const GIT_REPO_LATEST_RELEASE_LINK =

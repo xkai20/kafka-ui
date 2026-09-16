@@ -198,18 +198,21 @@ public class MessagesService {
   }
 
   public Flux<TopicMessageEventDTO> loadMessages(KafkaCluster cluster, String topic,
-                                                 ConsumerPosition consumerPosition,
-                                                 @Nullable String query,
-                                                 MessageFilterTypeDTO filterQueryType,
-                                                 @Nullable Integer pageSize,
-                                                 SeekDirectionDTO seekDirection,
-                                                 @Nullable String keySerde,
-                                                 @Nullable String valueSerde) {
+                                                ConsumerPosition consumerPosition,
+                                                @Nullable String query,
+                                                MessageFilterTypeDTO filterQueryType,
+                                                @Nullable Integer pageSize,
+                                                @Nullable Integer page,
+                                                SeekDirectionDTO seekDirection,
+                                                @Nullable String keySerde,
+                                                @Nullable String valueSerde) {
+    int pageNumber = fixPageNumber(page);
+    int limit = fixPageSize(pageSize);
     return withExistingTopic(cluster, topic)
         .flux()
         .publishOn(Schedulers.boundedElastic())
         .flatMap(td -> loadMessagesImpl(cluster, topic, consumerPosition, query,
-            filterQueryType, fixPageSize(pageSize), seekDirection, keySerde, valueSerde));
+            filterQueryType, limit, pageNumber, seekDirection, keySerde, valueSerde));
   }
 
   private int fixPageSize(@Nullable Integer pageSize) {
@@ -218,26 +221,39 @@ public class MessagesService {
         .orElse(defaultPageSize);
   }
 
+  private int fixPageNumber(@Nullable Integer page) {
+    if (page == null) {
+      return 0;
+    }
+    if (page < 0) {
+      throw new ValidationException("page should be >= 0, but was " + page);
+    }
+    return page;
+  }
+
   private Flux<TopicMessageEventDTO> loadMessagesImpl(KafkaCluster cluster,
                                                       String topic,
                                                       ConsumerPosition consumerPosition,
                                                       @Nullable String query,
                                                       MessageFilterTypeDTO filterQueryType,
                                                       int limit,
+                                                      int page,
                                                       SeekDirectionDTO seekDirection,
                                                       @Nullable String keySerde,
                                                       @Nullable String valueSerde) {
 
     var deserializer = deserializationService.deserializerFor(cluster, topic, keySerde, valueSerde);
     var filter = getMsgFilter(query, filterQueryType);
+    //messages of all preceding pages are consumed, but not sent to the client
+    long skipMessages = (long) page * limit;
     var emitter = switch (seekDirection) {
       case FORWARD -> new ForwardEmitter(
           () -> consumerGroupService.createConsumer(cluster),
-          consumerPosition, limit, deserializer, filter, cluster.getPollingSettings()
+          consumerPosition, limit, skipMessages, deserializer, filter, cluster.getPollingSettings()
       );
       case BACKWARD -> new BackwardEmitter(
           () -> consumerGroupService.createConsumer(cluster),
-          consumerPosition, limit, deserializer, filter, cluster.getPollingSettings()
+          consumerPosition, limit, skipMessages, deserializer, filter, cluster.getPollingSettings()
       );
       case TAILING -> new TailingEmitter(
           () -> consumerGroupService.createConsumer(cluster),

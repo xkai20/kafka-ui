@@ -14,7 +14,7 @@ export const Wrapper = styled.li.attrs({ role: 'menuitem' })<{
     grid-template-areas: 'title status . chevron';
     gap: 0 5px;
 
-    padding: 0.5em 0.75em;
+    padding: 0.5em 0.65em;
     cursor: pointer;
     text-decoration: none;
     margin: 0;
@@ -33,7 +33,7 @@ export const Wrapper = styled.li.attrs({ role: 'menuitem' })<{
 export const Title = styled.div`
   grid-area: title;
   white-space: nowrap;
-  max-width: 110px;
+  max-width: 145.8px;
   overflow: hidden;
   text-overflow: ellipsis;
   color: ${({ theme }) => theme.menu.titleColor};

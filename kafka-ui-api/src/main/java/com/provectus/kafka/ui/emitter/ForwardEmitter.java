@@ -16,6 +16,7 @@ public class ForwardEmitter extends RangePollingEmitter {
   public ForwardEmitter(Supplier<EnhancedConsumer> consumerSupplier,
                         ConsumerPosition consumerPosition,
                         int messagesPerPage,
+                        long skipMessages,
                         ConsumerRecordDeserializer deserializer,
                         Predicate<TopicMessageDTO> filter,
                         PollingSettings pollingSettings) {
@@ -27,7 +28,8 @@ public class ForwardEmitter extends RangePollingEmitter {
             deserializer,
             filter,
             true,
-            messagesPerPage
+            messagesPerPage,
+            skipMessages
         ),
         pollingSettings
     );

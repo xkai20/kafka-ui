@@ -25,7 +25,7 @@ export const Sidebar = styled.div<{ $visible: boolean }>(
     top: ${theme.layout.navBarHeight};
     left: 0;
     bottom: 0;
-    padding: 8px 16px;
+    padding: 8px 8px;
     overflow-y: scroll;
     transition: width 0.25s, opacity 0.25s, transform 0.25s,
       -webkit-transform 0.25s;
